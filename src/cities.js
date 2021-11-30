@@ -1,5 +1,5 @@
 import fs from "fs";
-import {pipe, map, prop, curry, append, mergeRight, reduce} from "ramda";
+import {pipe, map, prop, curry, append, mergeRight, reduce, length, filter} from "ramda";
 
 
 const readFile = path => fs.readFileSync(path, {encoding: 'utf-8'})
@@ -32,4 +32,30 @@ const groupByReducer = (acc, city) => {
 
 const groupedByProp = reduce(groupByReducer, {}, updatedCities)
 
-console.log(groupedByProp)
+//console.log(groupedByProp)
+
+const lessThan = curry((check, value) => {
+        return value < check
+})
+
+const percentile =  (arr, val) => {
+        const N = length(arr)
+        const checkLessThan = lessThan(val)
+        const n = length(filter(checkLessThan)(arr))
+        return  n * 100 / N
+}
+
+//console.log(percentile(groupedByProp['cost'], updatedCities[0].cost))
+const calcScore =  (city) => {
+        const costScore = percentile(groupedByProp['cost'], prop('cost', city))
+        const internetScore = percentile(groupedByProp['internetSpeed'], prop('internetSpeed', city))
+
+        return mergeRight(city,{
+                costScore,
+                internetScore
+        } )
+}
+
+const citiesWithScore = map(calcScore)(updatedCities)
+
+console.log(citiesWithScore)
