@@ -1,6 +1,20 @@
 import fs from "fs";
-import {pipe, map, prop, curry, append, mergeRight, reduce, length, filter} from "ramda";
-
+import {
+        pipe,
+        map,
+        prop,
+        curry,
+        append,
+        mergeRight,
+        reduce,
+        length,
+        filter,
+        sortWith,
+        descend,
+        take,
+        prepend
+} from "ramda";
+import table from 'text-table'
 
 const readFile = path => fs.readFileSync(path, {encoding: 'utf-8'})
 
@@ -49,13 +63,38 @@ const percentile =  (arr, val) => {
 const calcScore =  (city) => {
         const costScore = percentile(groupedByProp['cost'], prop('cost', city))
         const internetScore = percentile(groupedByProp['internetSpeed'], prop('internetSpeed', city))
-
+        const score =  80 * (1 - costScore / 100) + 20 * (internetScore/ 100)
         return mergeRight(city,{
                 costScore,
-                internetScore
+                internetScore,
+                score
         } )
 }
 
-const citiesWithScore = map(calcScore)(updatedCities)
+//const citiesWithScore = map(calcScore)(updatedCities)
 
-console.log(citiesWithScore)
+const filterByWeather = city => {
+        const {temp = 0, humidity = 0 } = city;
+        return temp > 20 && temp < 25 && humidity > 30 && humidity < 70
+}
+
+const cityToArray = city => {
+        const {name, country, score, cost, temp, internetSpeed} = city
+        return [name, country, score, cost, temp, internetSpeed]
+}
+
+const intrestingProps = ['Name', 'Country', 'Score', 'Cost', 'Temp', 'Internet Speed']
+
+const topCities = pipe(
+    map(updateTemperature(convertKToC)),
+    filter(filterByWeather),
+    map(calcScore),
+    sortWith([descend(prop('score'))]),
+    take(10),
+    map(cityToArray),
+    prepend(intrestingProps),
+    table
+)(citiesData)
+
+console.log('Top Cities')
+console.log(topCities)
